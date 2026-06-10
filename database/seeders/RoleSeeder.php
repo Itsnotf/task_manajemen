@@ -23,16 +23,19 @@ class RoleSeeder extends Seeder
             ->givePermissionTo([
                 'users index',
                 'tasks index', 'tasks create', 'tasks edit', 'tasks delete',
-                'handovers index',
+                'tasks updateStatus', 'tasks export',
+                'handovers index', 'handovers respond',
                 'activities index',
+                'comments create',
             ]);
 
-        // Anggota: lihat & klaim task + buat/balas handover
+        // Anggota: lihat & klaim task + update status + buat/balas handover
         Role::findByName('anggota')
             ->givePermissionTo([
-                'tasks index', 'tasks claim',
+                'tasks index', 'tasks claim', 'tasks updateStatus',
                 'handovers index', 'handovers create', 'handovers respond',
                 'activities index',
+                'comments create',
             ]);
     }
 }

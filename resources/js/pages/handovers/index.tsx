@@ -10,6 +10,7 @@ import { BreadcrumbItem, SharedData, TaskHandover } from '@/types';
 import { toast } from 'sonner';
 import hasAnyPermission from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
     Dialog, DialogContent, DialogHeader,
     DialogTitle, DialogFooter,
@@ -141,7 +142,7 @@ export default function HandoversPage({ handovers, filters, flash }: Props) {
                             ) : (
                                 handovers.data.map((handover) => (
                                     <TableRow key={handover.id}>
-                                        <TableCell className="font-medium max-w-xs truncate">
+                                        <TableCell className="font-medium max-w-xs truncate ">
                                             {handover.task?.title}
                                         </TableCell>
                                         <TableCell>{handover.from_user?.name}</TableCell>
@@ -151,8 +152,21 @@ export default function HandoversPage({ handovers, filters, flash }: Props) {
                                                 {handover.status}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-sm text-muted-foreground max-w-xs">
-                                            {handover.rejection_reason ?? '—'}
+                                        <TableCell className="text-sm text-muted-foreground max-w-[180px]">
+                                            {handover.rejection_reason ? (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button variant="ghost" size="sm" className="px-1">
+                                                            View Reason
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top" className="max-w-xs whitespace-normal">
+                                                        {handover.rejection_reason}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            ) : (
+                                                <span>—</span>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             {new Date(handover.created_at).toLocaleDateString()}

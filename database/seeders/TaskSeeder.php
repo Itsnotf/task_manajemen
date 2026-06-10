@@ -14,11 +14,11 @@ class TaskSeeder extends Seeder
     {
         $activity = app(TaskActivityService::class);
 
-        $ketua = User::where('email', 'budi@polsri.ac.id')->firstOrFail();
-        $andi  = User::where('email', 'andi@polsri.ac.id')->firstOrFail();
-        $risa  = User::where('email', 'risa@polsri.ac.id')->firstOrFail();
-        $dian  = User::where('email', 'dian@polsri.ac.id')->firstOrFail();
-        $fajar = User::where('email', 'fajar@polsri.ac.id')->firstOrFail();
+        $ketua = User::where('email', 'budi@demo.id')->firstOrFail();
+        $andi  = User::where('email', 'andi@demo.id')->firstOrFail();
+        $risa  = User::where('email', 'risa@demo.id')->firstOrFail();
+        $dian  = User::where('email', 'dian@demo.id')->firstOrFail();
+        $fajar = User::where('email', 'fajar@demo.id')->firstOrFail();
 
         $tasks = [
 

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Task;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Services\TaskService;
@@ -18,11 +17,13 @@ class TaskController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:tasks index',  only: ['index', 'show', 'exportPdf']),
-            new Middleware('permission:tasks create', only: ['create', 'store']),
-            new Middleware('permission:tasks edit',   only: ['edit', 'update', 'updateStatus']),
-            new Middleware('permission:tasks delete', only: ['destroy']),
-            new Middleware('permission:tasks claim',  only: ['claim']),
+            new Middleware('permission:tasks index',        only: ['index', 'show']),
+            new Middleware('permission:tasks create',       only: ['create', 'store']),
+            new Middleware('permission:tasks edit',         only: ['edit', 'update']),
+            new Middleware('permission:tasks delete',       only: ['destroy']),
+            new Middleware('permission:tasks claim',        only: ['claim']),
+            new Middleware('permission:tasks updateStatus', only: ['updateStatus']),
+            new Middleware('permission:tasks export',       only: ['exportPdf']),
         ];
     }
 

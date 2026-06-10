@@ -58,7 +58,7 @@ export default function TaskShowPage({ task }: Props) {
     const canClaim = task.status === 'open' && !task.assignee_id && hasAnyPermission(['tasks claim']);
     const canEdit = task.creator_id === auth.user.id && hasAnyPermission(['tasks edit']);
     const canDelete = task.creator_id === auth.user.id && hasAnyPermission(['tasks delete']);
-    const canExport = hasAnyPermission(['tasks index']);
+    const canExport = hasAnyPermission(['tasks export']);
     const canUpdateStatus =
         task.assignee_id === auth.user.id ||
         task.creator_id  === auth.user.id;

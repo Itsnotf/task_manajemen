@@ -10,12 +10,12 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $users = [
-            ['name' => 'Super Admin',    'email' => 'admin@polsri.ac.id',  'role' => 'admin'],
-            ['name' => 'Budi Santoso',   'email' => 'budi@polsri.ac.id',   'role' => 'ketua_bidang'],
-            ['name' => 'Andi Prasetyo',  'email' => 'andi@polsri.ac.id',   'role' => 'anggota'],
-            ['name' => 'Risa Putri',     'email' => 'risa@polsri.ac.id',   'role' => 'anggota'],
-            ['name' => 'Dian Kusuma',    'email' => 'dian@polsri.ac.id',   'role' => 'anggota'],
-            ['name' => 'Fajar Ramadhan', 'email' => 'fajar@polsri.ac.id',  'role' => 'anggota'],
+            ['name' => 'Super Admin',    'email' => 'admin@demo.id',  'role' => 'admin'],
+            ['name' => 'Budi Santoso',   'email' => 'budi@demo.id',   'role' => 'ketua_bidang'],
+            ['name' => 'Andi Prasetyo',  'email' => 'andi@demo.id',   'role' => 'anggota'],
+            ['name' => 'Risa Putri',     'email' => 'risa@demo.id',   'role' => 'anggota'],
+            ['name' => 'Dian Kusuma',    'email' => 'dian@demo.id',   'role' => 'anggota'],
+            ['name' => 'Fajar Ramadhan', 'email' => 'fajar@demo.id',  'role' => 'anggota'],
         ];
 
         foreach ($users as $data) {
@@ -23,7 +23,7 @@ class UserSeeder extends Seeder
                 ['email' => $data['email']],
                 [
                     'name'              => $data['name'],
-                    'password'          => 'password',
+                    'password'          => bcrypt('password'),
                     'email_verified_at' => now(),
                 ]
             );
