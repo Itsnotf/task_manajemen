@@ -1,0 +1,133 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Task;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+
+class TaskService
+{
+    public function __construct(private TaskActivityService $activityService) {}
+
+    public function getAll(?string $search = null): LengthAwarePaginator
+    {
+        $user = Auth::user();
+        $query = Task::with('creator', 'assignee');
+
+        // Role-based filtering
+        if ($user->hasRole('anggota')) {
+            // Anggota: hanya tugas mereka + open pool
+            $query->where(function ($q) use ($user) {
+                $q->where('assignee_id', $user->id)
+                  ->orWhereNull('assignee_id');
+            });
+        } elseif ($user->hasRole('ketua_bidang')) {
+            // Ketua: tugas yang mereka buat
+            $query->where('creator_id', $user->id);
+        }
+        // Admin: lihat semua (no filter)
+
+        $query->when($search, fn($q) => $q->where('title', 'like', "%{$search}%")
+            ->orWhere('description', 'like', "%{$search}%"));
+
+        return $query->paginate(config('starterkit.pagination'))
+            ->withQueryString();
+    }
+
+    public function findById(string $id): Task
+    {
+        return Task::with('creator', 'assignee', 'handovers', 'activities.user')->findOrFail($id);
+    }
+
+    public function create(array $data): Task
+    {
+        $data['creator_id'] = Auth::id();
+        $data['status'] = 'open';
+
+        // Handle file upload
+        if (isset($data['attachment_path']) && $data['attachment_path']) {
+            $file = $data['attachment_path'];
+            $data['attachment_path'] = $file->store('tasks/attachments', 'public');
+        }
+
+        $task = Task::create($data);
+
+        // Log activity
+        $this->activityService->logAction($task->id, Auth::id(), 'created', "Task '{$task->title}' created");
+
+        return $task;
+    }
+
+    public function update(string $id, array $data): Task
+    {
+        $task = $this->findById($id);
+
+        // Handle file upload
+        if (isset($data['attachment_path']) && $data['attachment_path']) {
+            // Delete old file
+            if ($task->attachment_path) {
+                Storage::disk('public')->delete($task->attachment_path);
+            }
+
+            $file = $data['attachment_path'];
+            $data['attachment_path'] = $file->store('tasks/attachments', 'public');
+        } else {
+            unset($data['attachment_path']);
+        }
+
+        $task->update($data);
+
+        // Log activity
+        $this->activityService->logAction($id, Auth::id(), 'updated', "Task '{$task->title}' updated");
+
+        return $task;
+    }
+
+    public function delete(string $id): void
+    {
+        $task = $this->findById($id);
+
+        // Delete file if exists
+        if ($task->attachment_path) {
+            Storage::disk('public')->delete($task->attachment_path);
+        }
+
+        $this->activityService->logAction($id, Auth::id(), 'deleted', "Task '{$task->title}' deleted");
+        $task->delete();
+    }
+
+    public function claim(string $id): Task
+    {
+        $task = $this->findById($id);
+
+        // Check if task is open
+        if ($task->assignee_id !== null) {
+            throw new \Exception('Task already assigned to someone');
+        }
+
+        $task->update([
+            'assignee_id' => Auth::id(),
+            'status' => 'in_progress',
+        ]);
+
+        // Log activity
+        $this->activityService->logAction($id, Auth::id(), 'claimed', Auth::user()->name . " claimed task '{$task->title}'");
+
+        return $task;
+    }
+
+    public function updateStatus(string $id, string $status): Task
+    {
+        $task = $this->findById($id);
+        $oldStatus = $task->status;
+
+        $task->update(['status' => $status]);
+
+        $this->activityService->logAction($id, Auth::id(), 'status_updated', "Status changed from '{$oldStatus}' to '{$status}'");
+
+        return $task;
+    }
+}
