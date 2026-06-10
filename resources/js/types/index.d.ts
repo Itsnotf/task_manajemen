@@ -29,6 +29,7 @@ export interface SharedData {
     quote: { message: string; author: string };
     auth: Auth;
     sidebarOpen: boolean;
+    notifications_count: number;
     [key: string]: unknown;
 }
 
@@ -64,6 +65,16 @@ export interface Role {
     permissions?: Permission[];
 }
 
+export interface TaskComment {
+    id: number;
+    task_id: number;
+    user_id: number;
+    body: string;
+    author?: User;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface Task {
     id: number;
     title: string;
@@ -78,6 +89,7 @@ export interface Task {
     assignee?: User;
     handovers?: TaskHandover[];
     activities?: TaskActivity[];
+    comments?: TaskComment[];
     created_at: string;
     updated_at: string;
 }
@@ -90,6 +102,7 @@ export interface TaskHandover {
     status: 'pending' | 'approved' | 'rejected';
     notes: string | null;
     proof_path: string | null;
+    rejection_reason: string | null;
     task?: Task;
     from_user?: User;
     to_user?: User;

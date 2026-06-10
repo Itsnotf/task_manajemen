@@ -6,6 +6,7 @@ use App\Models\Task;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Services\TaskService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -17,7 +18,7 @@ class TaskController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:tasks index',  only: ['index', 'show']),
+            new Middleware('permission:tasks index',  only: ['index', 'show', 'exportPdf']),
             new Middleware('permission:tasks create', only: ['create', 'store']),
             new Middleware('permission:tasks edit',   only: ['edit', 'update', 'updateStatus']),
             new Middleware('permission:tasks delete', only: ['destroy']),
@@ -27,10 +28,24 @@ class TaskController extends Controller implements HasMiddleware
 
     public function index(Request $request)
     {
+        $isKanban = $request->query('view') === 'kanban';
+
         return inertia('tasks/index', [
-            'tasks'   => $this->taskService->getAll($request->search),
+            'tasks'   => $isKanban
+                ? ['data' => $this->taskService->getAllForKanban($request->search), 'links' => []]
+                : $this->taskService->getAll($request->search),
             'filters' => $request->only('search'),
+            'view'    => $isKanban ? 'kanban' : 'table',
         ]);
+    }
+
+    public function exportPdf(string $id)
+    {
+        $task = $this->taskService->findById($id);
+
+        $pdf = Pdf::loadView('pdf.task-activity', compact('task'));
+
+        return $pdf->download("task-{$task->id}-activity.pdf");
     }
 
     public function create()

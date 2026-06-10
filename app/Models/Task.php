@@ -38,4 +38,9 @@ class Task extends Model
     {
         return $this->hasMany(TaskActivity::class);
     }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(TaskComment::class)->with('author')->latest();
+    }
 }

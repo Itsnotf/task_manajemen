@@ -1,12 +1,17 @@
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
-import { Link, Head, usePage } from '@inertiajs/react';
+import { Link, Head, usePage, router } from '@inertiajs/react';
 import { BreadcrumbItem, Task, SharedData } from '@/types';
-import { ChevronLeft, Download, Edit2Icon } from 'lucide-react';
+import { ChevronLeft, Download, Edit2Icon, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import ActivityFeed from '@/components/activity-feed';
-import hasAnyPermission from '@/lib/utils';
+import hasAnyPermission, { isOverdue } from '@/lib/utils';
+import {
+    Select, SelectContent, SelectItem,
+    SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import DeleteButton from '@/components/delete-button';
+import TaskCommentSection from '@/components/task-comment-section';
 
 interface Props {
     task: Task;
@@ -53,6 +58,10 @@ export default function TaskShowPage({ task }: Props) {
     const canClaim = task.status === 'open' && !task.assignee_id && hasAnyPermission(['tasks claim']);
     const canEdit = task.creator_id === auth.user.id && hasAnyPermission(['tasks edit']);
     const canDelete = task.creator_id === auth.user.id && hasAnyPermission(['tasks delete']);
+    const canExport = hasAnyPermission(['tasks index']);
+    const canUpdateStatus =
+        task.assignee_id === auth.user.id ||
+        task.creator_id  === auth.user.id;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -74,10 +83,21 @@ export default function TaskShowPage({ task }: Props) {
                     </div>
 
                     <div className="flex gap-2 flex-wrap">
+                        {canExport && (
+                            <a href={`/tasks/${task.id}/export-pdf`} target="_blank" rel="noopener noreferrer">
+                                <Button variant="outline">
+                                    <Download className="size-4" />
+                                    Export PDF
+                                </Button>
+                            </a>
+                        )}
                         {canClaim && (
-                            <form method="post" action={`/tasks/${task.id}/claim`}>
-                                <Button variant="default">Claim Task</Button>
-                            </form>
+                            <Button
+                                variant="default"
+                                onClick={() => router.post(`/tasks/${task.id}/claim`)}
+                            >
+                                Claim Task
+                            </Button>
                         )}
                         {canEdit && (
                             <Link href={`/tasks/${task.id}/edit`}>
@@ -126,6 +146,12 @@ export default function TaskShowPage({ task }: Props) {
                             <ActivityFeed activities={task.activities || []} />
                         </div>
 
+                        {/* Discussion / Comments */}
+                        <div className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                            <h2 className="text-lg font-semibold mb-4">Diskusi</h2>
+                            <TaskCommentSection task={task} />
+                        </div>
+
                     </div>
 
                     {/* Sidebar - Details */}
@@ -134,9 +160,34 @@ export default function TaskShowPage({ task }: Props) {
                         {/* Status */}
                         <div className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
                             <p className="text-xs font-semibold text-muted-foreground mb-2">STATUS</p>
-                            <Badge variant={getStatusColor(task.status) as any} className="text-base py-1.5">
-                                {task.status}
-                            </Badge>
+                            {canUpdateStatus ? (
+                                <Select
+                                    value={task.status}
+                                    onValueChange={(value) =>
+                                        router.patch(`/tasks/${task.id}/status`, { status: value })
+                                    }
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="open">Open</SelectItem>
+                                        <SelectItem value="in_progress">In Progress</SelectItem>
+                                        <SelectItem value="review">Review</SelectItem>
+                                        <SelectItem value="done">Done</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <Badge variant={getStatusColor(task.status) as any} className="text-base py-1.5">
+                                    {task.status}
+                                </Badge>
+                            )}
+                            {isOverdue(task.deadline, task.status) && (
+                                <div className="flex items-center gap-1.5 mt-2 text-destructive text-sm">
+                                    <AlertCircle className="size-4" />
+                                    <span className="font-medium">Melewati tenggat!</span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Priority */}

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use App\Models\TaskHandover;
 use App\Http\Requests\StoreTaskHandoverRequest;
 use App\Services\TaskHandoverService;
 use Illuminate\Http\Request;
@@ -36,7 +35,9 @@ class TaskHandoverController extends Controller implements HasMiddleware
     public function create()
     {
         return inertia('handovers/create', [
-            'tasks' => Task::where('creator_id', Auth::id())->orWhere('assignee_id', Auth::id())->get(),
+            'tasks' => Task::where('assignee_id', Auth::id())
+                           ->whereNotIn('status', ['open', 'done'])
+                           ->get(),
             'users' => User::where('id', '!=', Auth::id())->get(),
         ]);
     }
@@ -50,13 +51,16 @@ class TaskHandoverController extends Controller implements HasMiddleware
 
     public function respond(Request $request, string $id)
     {
-        $request->validate(['action' => 'required|in:approve,reject']);
+        $request->validate([
+            'action'           => 'required|in:approve,reject',
+            'rejection_reason' => 'required_if:action,reject|nullable|string|max:500',
+        ]);
 
         if ($request->action === 'approve') {
             $this->taskHandoverService->approve($id);
             $message = 'Handover approved successfully';
         } else {
-            $this->taskHandoverService->reject($id);
+            $this->taskHandoverService->reject($id, $request->rejection_reason);
             $message = 'Handover rejected successfully';
         }
 

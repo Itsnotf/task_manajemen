@@ -14,6 +14,7 @@ class TaskHandover extends Model
         'status',
         'notes',
         'proof_path',
+        'rejection_reason',
     ];
 
     public function task(): BelongsTo

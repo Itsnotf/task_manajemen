@@ -2,21 +2,37 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RoleSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         foreach (config('starterkit.roles') as $role) {
-            \Spatie\Permission\Models\Role::create(['name' => $role]);
+            Role::create(['name' => $role]);
         }
 
-        $admin = \Spatie\Permission\Models\Role::findByName(config('starterkit.default_admin_role'));
-        $admin->givePermissionTo(\Spatie\Permission\Models\Permission::all());
+        // Admin: semua permission
+        Role::findByName('admin')
+            ->givePermissionTo(Permission::all());
+
+        // Ketua Bidang: kelola task + lihat handover/activity/user
+        Role::findByName('ketua_bidang')
+            ->givePermissionTo([
+                'users index',
+                'tasks index', 'tasks create', 'tasks edit', 'tasks delete',
+                'handovers index',
+                'activities index',
+            ]);
+
+        // Anggota: lihat & klaim task + buat/balas handover
+        Role::findByName('anggota')
+            ->givePermissionTo([
+                'tasks index', 'tasks claim',
+                'handovers index', 'handovers create', 'handovers respond',
+                'activities index',
+            ]);
     }
 }

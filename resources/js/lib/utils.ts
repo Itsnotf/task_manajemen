@@ -6,6 +6,11 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
+export function isOverdue(deadline: string | null, status: string): boolean {
+    if (!deadline || status === 'done') return false;
+    return new Date(deadline) < new Date();
+}
+
 export function isSameUrl(
     url1: NonNullable<InertiaLinkProps['href']>,
     url2: NonNullable<InertiaLinkProps['href']>,

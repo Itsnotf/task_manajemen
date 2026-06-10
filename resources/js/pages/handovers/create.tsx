@@ -63,11 +63,17 @@ export default function HandoverCreatePage({ tasks, users }: Props) {
                                 <SelectValue placeholder="Select a task" />
                             </SelectTrigger>
                             <SelectContent>
-                                {tasks.map((task) => (
-                                    <SelectItem key={task.id} value={task.id.toString()}>
-                                        {task.title} - {task.status}
-                                    </SelectItem>
-                                ))}
+                                {tasks.length === 0 ? (
+                                    <div className="p-3 text-sm text-muted-foreground text-center">
+                                        Tidak ada task aktif yang bisa di-handover.
+                                    </div>
+                                ) : (
+                                    tasks.map((task) => (
+                                        <SelectItem key={task.id} value={task.id.toString()}>
+                                            {task.title} — {task.status}
+                                        </SelectItem>
+                                    ))
+                                )}
                             </SelectContent>
                         </Select>
                         <InputError message={errors.task_id} />

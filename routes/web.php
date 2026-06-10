@@ -5,6 +5,8 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskHandoverController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\TaskCommentController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -25,6 +27,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.updateStatus');
     Route::resource('handovers', TaskHandoverController::class)->except(['edit', 'update', 'destroy', 'show']);
     Route::post('handovers/{handover}/respond', [TaskHandoverController::class, 'respond'])->name('handovers.respond');
+
+    Route::get('tasks/{task}/export-pdf', [TaskController::class, 'exportPdf'])->name('tasks.exportPdf');
+    Route::post('tasks/{task}/comments', [TaskCommentController::class, 'store'])->name('tasks.comments.store');
+
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/read', [NotificationController::class, 'markAllRead'])->name('notifications.read');
 });
 
 require __DIR__ . '/settings.php';

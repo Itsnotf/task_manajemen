@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\Task;
+use App\Notifications\TaskAssigned;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
@@ -37,9 +39,29 @@ class TaskService
             ->withQueryString();
     }
 
+    public function getAllForKanban(?string $search = null): Collection
+    {
+        $user  = Auth::user();
+        $query = Task::with('creator', 'assignee');
+
+        if ($user->hasRole('anggota')) {
+            $query->where(function ($q) use ($user) {
+                $q->where('assignee_id', $user->id)->orWhereNull('assignee_id');
+            });
+        } elseif ($user->hasRole('ketua_bidang')) {
+            $query->where('creator_id', $user->id);
+        }
+
+        $query->when($search, fn($q) => $q->where('title', 'like', "%{$search}%")
+            ->orWhere('description', 'like', "%{$search}%"));
+
+        return $query->orderBy('status')->get();
+    }
+
     public function findById(string $id): Task
     {
-        return Task::with('creator', 'assignee', 'handovers', 'activities.user')->findOrFail($id);
+        return Task::with('creator', 'assignee', 'handovers', 'activities.user', 'comments.author')
+                   ->findOrFail($id);
     }
 
     public function create(array $data): Task
@@ -55,8 +77,11 @@ class TaskService
 
         $task = Task::create($data);
 
-        // Log activity
         $this->activityService->logAction($task->id, Auth::id(), 'created', "Task '{$task->title}' created");
+
+        if ($task->assignee_id) {
+            $task->assignee->notify(new TaskAssigned($task));
+        }
 
         return $task;
     }
@@ -113,8 +138,10 @@ class TaskService
             'status' => 'in_progress',
         ]);
 
-        // Log activity
         $this->activityService->logAction($id, Auth::id(), 'claimed', Auth::user()->name . " claimed task '{$task->title}'");
+
+        $task->refresh();
+        $task->assignee->notify(new TaskAssigned($task));
 
         return $task;
     }

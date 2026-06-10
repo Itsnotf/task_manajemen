@@ -10,6 +10,12 @@ import { BreadcrumbItem, SharedData, TaskHandover } from '@/types';
 import { toast } from 'sonner';
 import hasAnyPermission from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import {
+    Dialog, DialogContent, DialogHeader,
+    DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 
 interface Props {
@@ -37,6 +43,11 @@ export default function HandoversPage({ handovers, filters, flash }: Props) {
 
     const [search, setSearch] = useState(filters.search || '');
     const [shownMessages] = useState(new Set());
+    const [rejectDialog, setRejectDialog] = useState<{
+        open: boolean;
+        handoverId: number | null;
+        reason: string;
+    }>({ open: false, handoverId: null, reason: '' });
 
     useEffect(() => {
         if (flash?.success && !shownMessages.has(flash.success)) {
@@ -61,9 +72,20 @@ export default function HandoversPage({ handovers, filters, flash }: Props) {
         }
     };
 
-    const handleRespond = (id: number, action: 'approve' | 'reject') => {
-        router.post(`/handovers/${id}/respond`, { action }, {
+    const handleApprove = (id: number) => {
+        router.post(`/handovers/${id}/respond`, { action: 'approve' }, {
             preserveScroll: true,
+        });
+    };
+
+    const handleRejectSubmit = () => {
+        if (!rejectDialog.handoverId || !rejectDialog.reason.trim()) return;
+        router.post(`/handovers/${rejectDialog.handoverId}/respond`, {
+            action: 'reject',
+            rejection_reason: rejectDialog.reason,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => setRejectDialog({ open: false, handoverId: null, reason: '' }),
         });
     };
 
@@ -101,6 +123,7 @@ export default function HandoversPage({ handovers, filters, flash }: Props) {
                                 <TableHead>From</TableHead>
                                 <TableHead>To</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead>Alasan Tolak</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead>Actions</TableHead>
                             </TableRow>
@@ -108,7 +131,7 @@ export default function HandoversPage({ handovers, filters, flash }: Props) {
                         <TableBody>
                             {handovers.data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                                         <div className='flex flex-col items-center gap-2'>
                                             <FileText className='size-8 opacity-50' />
                                             <p>No handovers found</p>
@@ -128,6 +151,9 @@ export default function HandoversPage({ handovers, filters, flash }: Props) {
                                                 {handover.status}
                                             </Badge>
                                         </TableCell>
+                                        <TableCell className="text-sm text-muted-foreground max-w-xs">
+                                            {handover.rejection_reason ?? '—'}
+                                        </TableCell>
                                         <TableCell>
                                             {new Date(handover.created_at).toLocaleDateString()}
                                         </TableCell>
@@ -138,14 +164,18 @@ export default function HandoversPage({ handovers, filters, flash }: Props) {
                                                         <Button
                                                             size="sm"
                                                             variant="default"
-                                                            onClick={() => handleRespond(handover.id, 'approve')}
+                                                            onClick={() => handleApprove(handover.id)}
                                                         >
                                                             Approve
                                                         </Button>
                                                         <Button
                                                             size="sm"
                                                             variant="destructive"
-                                                            onClick={() => handleRespond(handover.id, 'reject')}
+                                                            onClick={() => setRejectDialog({
+                                                                open: true,
+                                                                handoverId: handover.id,
+                                                                reason: '',
+                                                            })}
                                                         >
                                                             Reject
                                                         </Button>
@@ -186,6 +216,48 @@ export default function HandoversPage({ handovers, filters, flash }: Props) {
                     </div>
                 )}
             </div>
+            <Dialog
+                open={rejectDialog.open}
+                onOpenChange={(open) => setRejectDialog(prev => ({ ...prev, open }))}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Tolak Permintaan Handover</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-3 py-2">
+                        <Label htmlFor="rejection_reason">
+                            Alasan Penolakan <span className="text-destructive">*</span>
+                        </Label>
+                        <Textarea
+                            id="rejection_reason"
+                            placeholder="Contoh: Saya sedang overload tugas lain hingga akhir bulan..."
+                            value={rejectDialog.reason}
+                            onChange={(e) => setRejectDialog(prev => ({
+                                ...prev, reason: e.target.value
+                            }))}
+                            rows={4}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Alasan ini akan terlihat oleh pemohon handover.
+                        </p>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setRejectDialog({ open: false, handoverId: null, reason: '' })}
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            disabled={!rejectDialog.reason.trim()}
+                            onClick={handleRejectSubmit}
+                        >
+                            Tolak Handover
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }
