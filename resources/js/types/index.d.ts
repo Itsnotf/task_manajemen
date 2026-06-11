@@ -83,6 +83,9 @@ export interface Task {
     priority: 'low' | 'medium' | 'high';
     deadline: string | null;
     attachment_path: string | null;
+    submission_path: string | null;
+    submission_note: string | null;
+    submitted_at: string | null;
     creator_id: number;
     assignee_id: number | null;
     creator?: User;

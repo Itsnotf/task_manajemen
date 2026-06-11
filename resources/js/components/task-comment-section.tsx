@@ -1,8 +1,8 @@
-import { useForm, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
-import { type Task, type SharedData } from '@/types';
+import { Textarea } from '@/components/ui/textarea';
+import { type SharedData, type Task } from '@/types';
+import { useForm, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 
 interface Props {
@@ -13,11 +13,13 @@ export default function TaskCommentSection({ task }: Props) {
     const { auth } = usePage<SharedData>().props;
     const comments = task.comments ?? [];
 
-    const { data, setData, post, processing, reset, errors } = useForm({ body: '' });
+    const { data, setData, post, processing, reset, errors } = useForm({
+        body: '',
+    });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(route('tasks.comments.store', task.id), {
+        post(`/tasks/${task.id}/comments`, {
             preserveScroll: true,
             onSuccess: () => reset('body'),
         });
@@ -27,7 +29,7 @@ export default function TaskCommentSection({ task }: Props) {
         <div className="space-y-4">
             {/* Comment list */}
             {comments.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
+                <p className="py-4 text-center text-sm text-muted-foreground">
                     Belum ada komentar. Mulai diskusi di bawah.
                 </p>
             ) : (
@@ -43,22 +45,27 @@ export default function TaskCommentSection({ task }: Props) {
 
                         return (
                             <div key={comment.id} className="flex gap-3">
-                                <div className="flex-shrink-0 size-8 rounded-full bg-muted flex items-center justify-center text-xs font-semibold">
+                                <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
                                     {initials}
                                 </div>
-                                <div className="flex-1 min-w-0">
+                                <div className="min-w-0 flex-1">
                                     <div className="flex items-baseline gap-2">
                                         <span className="text-sm font-medium">
                                             {comment.author?.name ?? 'Unknown'}
                                         </span>
                                         {isOwn && (
-                                            <span className="text-xs text-muted-foreground">(Anda)</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                (Anda)
+                                            </span>
                                         )}
-                                        <span className="text-xs text-muted-foreground ml-auto">
-                                            {format(new Date(comment.created_at), 'dd MMM, HH:mm')}
+                                        <span className="ml-auto text-xs text-muted-foreground">
+                                            {format(
+                                                new Date(comment.created_at),
+                                                'dd MMM, HH:mm',
+                                            )}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-wrap">
+                                    <p className="mt-0.5 text-sm whitespace-pre-wrap text-muted-foreground">
                                         {comment.body}
                                     </p>
                                 </div>
@@ -69,7 +76,10 @@ export default function TaskCommentSection({ task }: Props) {
             )}
 
             {/* New comment form */}
-            <form onSubmit={handleSubmit} className="space-y-2 pt-2 border-t border-sidebar-border/70">
+            <form
+                onSubmit={handleSubmit}
+                className="space-y-2 border-t border-sidebar-border/70 pt-2"
+            >
                 <Textarea
                     placeholder="Tulis komentar atau pertanyaan..."
                     value={data.body}
@@ -81,7 +91,11 @@ export default function TaskCommentSection({ task }: Props) {
                     <p className="text-xs text-destructive">{errors.body}</p>
                 )}
                 <div className="flex justify-end">
-                    <Button type="submit" size="sm" disabled={processing || !data.body.trim()}>
+                    <Button
+                        type="submit"
+                        size="sm"
+                        disabled={processing || !data.body.trim()}
+                    >
                         {processing ? <Spinner /> : 'Kirim'}
                     </Button>
                 </div>

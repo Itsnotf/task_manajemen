@@ -2,7 +2,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { type Task } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Paperclip } from 'lucide-react';
+import { AlertCircle, Paperclip, GripVertical } from 'lucide-react';
 import { isOverdue } from '@/lib/utils';
 import { Link } from '@inertiajs/react';
 
@@ -33,26 +33,35 @@ export default function KanbanCard({ task }: Props) {
         <div
             ref={setNodeRef}
             style={style}
-            className="rounded-lg border border-sidebar-border/70 bg-card p-3 shadow-sm cursor-grab active:cursor-grabbing dark:border-sidebar-border"
             {...attributes}
-            {...listeners}
+            className="rounded-lg border border-sidebar-border/70 bg-card p-3 shadow-sm dark:border-sidebar-border"
         >
-            {/* Header row */}
-            <div className="flex items-start justify-between gap-2 mb-2">
+            {/* Header row: drag handle + title + priority */}
+            <div className="flex items-start gap-1.5 mb-2">
+                {/* Drag handle — HANYA area ini yang bisa di-drag */}
+                <div
+                    {...listeners}
+                    className="cursor-grab active:cursor-grabbing mt-0.5 flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                    title="Drag untuk pindah kolom"
+                >
+                    <GripVertical className="size-3.5" />
+                </div>
+
+                {/* Title — klik langsung ke halaman detail */}
                 <Link
                     href={`/tasks/${task.id}`}
                     className="text-sm font-medium leading-snug hover:underline line-clamp-2 flex-1"
-                    onClick={(e) => e.stopPropagation()}
                 >
                     {task.title}
                 </Link>
+
                 <Badge variant={priorityVariant[task.priority] ?? 'outline'} className="text-[10px] shrink-0">
                     {task.priority}
                 </Badge>
             </div>
 
             {/* Footer row */}
-            <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center justify-between mt-2 pl-5">
                 <div className="flex items-center gap-1.5">
                     {overdue && (
                         <span title="Overdue">

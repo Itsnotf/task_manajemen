@@ -1,8 +1,8 @@
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
-import { Link, Head, usePage, router } from '@inertiajs/react';
+import { Link, Head, usePage, router, useForm } from '@inertiajs/react';
 import { BreadcrumbItem, Task, SharedData } from '@/types';
-import { ChevronLeft, Download, Edit2Icon, AlertCircle } from 'lucide-react';
+import { ChevronLeft, Download, Edit2Icon, AlertCircle, Upload, CheckCircle2, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import ActivityFeed from '@/components/activity-feed';
 import hasAnyPermission, { isOverdue } from '@/lib/utils';
@@ -12,6 +12,10 @@ import {
 } from '@/components/ui/select';
 import DeleteButton from '@/components/delete-button';
 import TaskCommentSection from '@/components/task-comment-section';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 
 interface Props {
     task: Task;
@@ -62,6 +66,25 @@ export default function TaskShowPage({ task }: Props) {
     const canUpdateStatus =
         task.assignee_id === auth.user.id ||
         task.creator_id  === auth.user.id;
+
+    const canSubmit =
+        task.assignee_id === auth.user.id &&
+        !['open', 'done'].includes(task.status);
+
+    const { data: submitData, setData: setSubmitData, post: submitPost,
+            processing: submitProcessing, errors: submitErrors, reset: submitReset } = useForm({
+        submission_note: task.submission_note ?? '',
+        submission_path: null as File | null,
+    });
+
+    const handleSubmitResult = (e: React.FormEvent) => {
+        e.preventDefault();
+        submitPost(`/tasks/${task.id}/submit`, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => submitReset(),
+        });
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -137,6 +160,106 @@ export default function TaskShowPage({ task }: Props) {
                                         Download File
                                     </Button>
                                 </a>
+                            </div>
+                        )}
+
+                        {/* Hasil Kerja — tampil untuk semua jika sudah ada submission, atau untuk assignee */}
+                        {(task.submission_path || task.submission_note || canSubmit) && (
+                            <div className="rounded-lg border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                                <h2 className="text-lg font-semibold mb-4">Hasil Kerja</h2>
+
+                                {/* Tampilkan hasil yang sudah disubmit */}
+                                {(task.submission_path || task.submission_note) && (
+                                    <div className="rounded-md bg-muted/50 border border-sidebar-border/50 p-3 mb-4 space-y-2">
+                                        <div className="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-400">
+                                            <CheckCircle2 className="size-4" />
+                                            <span>
+                                                Hasil diserahkan
+                                                {task.submitted_at && (
+                                                    <span className="font-normal text-muted-foreground ml-1">
+                                                        — {new Date(task.submitted_at).toLocaleDateString('id-ID', {
+                                                            day: 'numeric', month: 'short', year: 'numeric',
+                                                            hour: '2-digit', minute: '2-digit',
+                                                        })}
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </div>
+                                        {task.submission_note && (
+                                            <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-6">
+                                                {task.submission_note}
+                                            </p>
+                                        )}
+                                        {task.submission_path && (
+                                            <a
+                                                href={`/storage/${task.submission_path}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="pl-6 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                                            >
+                                                <Download className="size-3.5" />
+                                                Unduh file hasil kerja
+                                                <ExternalLink className="size-3" />
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Form submit — hanya untuk assignee, hanya jika belum done */}
+                                {canSubmit && (
+                                    <>
+                                        {(task.submission_path || task.submission_note) && (
+                                            <Separator className="mb-4" />
+                                        )}
+                                        <p className="text-sm text-muted-foreground mb-3">
+                                            {task.submission_path || task.submission_note
+                                                ? 'Perbarui hasil kerja:'
+                                                : 'Serahkan hasil kerja kamu:'}
+                                        </p>
+                                        <form onSubmit={handleSubmitResult} className="space-y-3">
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="submission_note">
+                                                    Catatan atau Link
+                                                </Label>
+                                                <Textarea
+                                                    id="submission_note"
+                                                    placeholder="Tambahkan deskripsi, link Google Drive, atau catatan lainnya..."
+                                                    value={submitData.submission_note}
+                                                    onChange={(e) => setSubmitData('submission_note', e.target.value)}
+                                                    rows={3}
+                                                    disabled={submitProcessing}
+                                                />
+                                                {submitErrors.submission_note && (
+                                                    <p className="text-xs text-destructive">{submitErrors.submission_note}</p>
+                                                )}
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label htmlFor="submission_path">
+                                                    Upload File <span className="text-muted-foreground font-normal">(opsional, maks 20MB)</span>
+                                                </Label>
+                                                <Input
+                                                    id="submission_path"
+                                                    type="file"
+                                                    disabled={submitProcessing}
+                                                    onChange={(e) => setSubmitData('submission_path', e.target.files?.[0] ?? null)}
+                                                />
+                                                {submitErrors.submission_path && (
+                                                    <p className="text-xs text-destructive">{submitErrors.submission_path}</p>
+                                                )}
+                                            </div>
+                                            <div className="flex justify-end">
+                                                <Button type="submit" disabled={submitProcessing}>
+                                                    <Upload className="size-4" />
+                                                    {submitProcessing
+                                                        ? 'Mengirim...'
+                                                        : task.status === 'in_progress'
+                                                            ? 'Serahkan & Pindah ke Review'
+                                                            : 'Perbarui Hasil Kerja'}
+                                                </Button>
+                                            </div>
+                                        </form>
+                                    </>
+                                )}
                             </div>
                         )}
 

@@ -6,9 +6,8 @@ use App\Models\Task;
 use App\Notifications\TaskAssigned;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 
 class TaskService
 {
@@ -24,7 +23,7 @@ class TaskService
             // Anggota: hanya tugas mereka + open pool
             $query->where(function ($q) use ($user) {
                 $q->where('assignee_id', $user->id)
-                  ->orWhereNull('assignee_id');
+                    ->orWhereNull('assignee_id');
             });
         } elseif ($user->hasRole('ketua_bidang')) {
             // Ketua: tugas yang mereka buat
@@ -32,7 +31,7 @@ class TaskService
         }
         // Admin: lihat semua (no filter)
 
-        $query->when($search, fn($q) => $q->where('title', 'like', "%{$search}%")
+        $query->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%")
             ->orWhere('description', 'like', "%{$search}%"));
 
         return $query->paginate(config('starterkit.pagination'))
@@ -41,7 +40,7 @@ class TaskService
 
     public function getAllForKanban(?string $search = null): Collection
     {
-        $user  = Auth::user();
+        $user = Auth::user();
         $query = Task::with('creator', 'assignee');
 
         if ($user->hasRole('anggota')) {
@@ -52,7 +51,7 @@ class TaskService
             $query->where('creator_id', $user->id);
         }
 
-        $query->when($search, fn($q) => $q->where('title', 'like', "%{$search}%")
+        $query->when($search, fn ($q) => $q->where('title', 'like', "%{$search}%")
             ->orWhere('description', 'like', "%{$search}%"));
 
         return $query->orderBy('status')->get();
@@ -61,7 +60,7 @@ class TaskService
     public function findById(string $id): Task
     {
         return Task::with('creator', 'assignee', 'handovers', 'activities.user', 'comments.author')
-                   ->findOrFail($id);
+            ->findOrFail($id);
     }
 
     public function create(array $data): Task
@@ -138,7 +137,7 @@ class TaskService
             'status' => 'in_progress',
         ]);
 
-        $this->activityService->logAction($id, Auth::id(), 'claimed', Auth::user()->name . " claimed task '{$task->title}'");
+        $this->activityService->logAction($id, Auth::id(), 'claimed', Auth::user()->name." claimed task '{$task->title}'");
 
         $task->refresh();
         $task->assignee->notify(new TaskAssigned($task));
@@ -156,5 +155,46 @@ class TaskService
         $this->activityService->logAction($id, Auth::id(), 'status_updated', "Status changed from '{$oldStatus}' to '{$status}'");
 
         return $task;
+    }
+
+    public function submitResult(string $id, array $data): Task
+    {
+        $task = $this->findById($id);
+
+        if ($task->assignee_id !== Auth::id()) {
+            throw new \Exception('Hanya pemegang task yang dapat menyerahkan hasil kerja.');
+        }
+
+        if (in_array($task->status, ['open', 'done'])) {
+            throw new \Exception('Hasil kerja hanya dapat diserahkan untuk task berstatus In Progress atau Review.');
+        }
+
+        $updateData = [
+            'submission_note' => $data['submission_note'] ?? null,
+            'submitted_at' => now(),
+        ];
+
+        if (! empty($data['submission_path']) && $data['submission_path'] instanceof \Illuminate\Http\UploadedFile) {
+            if ($task->submission_path) {
+                Storage::disk('public')->delete($task->submission_path);
+            }
+            $updateData['submission_path'] = $data['submission_path']->store('tasks/submissions', 'public');
+        }
+
+        if ($task->status === 'in_progress') {
+            $updateData['status'] = 'review';
+            $this->activityService->logAction($id, Auth::id(), 'status_updated', "Status otomatis berubah ke 'review' setelah hasil kerja diserahkan");
+        }
+
+        $task->update($updateData);
+
+        $this->activityService->logAction(
+            $id,
+            Auth::id(),
+            'submitted',
+            Auth::user()->name.' menyerahkan hasil kerja'
+        );
+
+        return $task->fresh();
     }
 }

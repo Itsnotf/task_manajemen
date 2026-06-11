@@ -17,6 +17,9 @@ class Task extends Model
         'attachment_path',
         'creator_id',
         'assignee_id',
+        'submission_path',
+        'submission_note',
+        'submitted_at',
     ];
 
     public function creator(): BelongsTo

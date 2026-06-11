@@ -17,13 +17,14 @@ class TaskController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:tasks index',        only: ['index', 'show']),
-            new Middleware('permission:tasks create',       only: ['create', 'store']),
-            new Middleware('permission:tasks edit',         only: ['edit', 'update']),
-            new Middleware('permission:tasks delete',       only: ['destroy']),
-            new Middleware('permission:tasks claim',        only: ['claim']),
+            new Middleware('permission:tasks index', only: ['index', 'show']),
+            new Middleware('permission:tasks create', only: ['create', 'store']),
+            new Middleware('permission:tasks edit', only: ['edit', 'update']),
+            new Middleware('permission:tasks delete', only: ['destroy']),
+            new Middleware('permission:tasks claim', only: ['claim']),
             new Middleware('permission:tasks updateStatus', only: ['updateStatus']),
-            new Middleware('permission:tasks export',       only: ['exportPdf']),
+            new Middleware('permission:tasks export', only: ['exportPdf']),
+            new Middleware('permission:tasks updateStatus', only: ['submitResult']),
         ];
     }
 
@@ -32,11 +33,11 @@ class TaskController extends Controller implements HasMiddleware
         $isKanban = $request->query('view') === 'kanban';
 
         return inertia('tasks/index', [
-            'tasks'   => $isKanban
+            'tasks' => $isKanban
                 ? ['data' => $this->taskService->getAllForKanban($request->search), 'links' => []]
                 : $this->taskService->getAll($request->search),
             'filters' => $request->only('search'),
-            'view'    => $isKanban ? 'kanban' : 'table',
+            'view' => $isKanban ? 'kanban' : 'table',
         ]);
     }
 
@@ -63,8 +64,10 @@ class TaskController extends Controller implements HasMiddleware
 
     public function show(string $id)
     {
+        $task = $this->taskService->findById($id);
+
         return inertia('tasks/show', [
-            'task' => $this->taskService->findById($id),
+            'task' => $task,
         ]);
     }
 
@@ -96,6 +99,26 @@ class TaskController extends Controller implements HasMiddleware
         $this->taskService->updateStatus($id, $request->status);
 
         return redirect()->route('tasks.show', $id)->with('success', 'Task status updated successfully');
+    }
+
+    public function submitResult(Request $request, string $id)
+    {
+        $request->validate([
+            'submission_note' => 'nullable|string|max:2000',
+            'submission_path' => 'nullable|file|max:20480',
+        ]);
+
+        if (! $request->hasFile('submission_path') && ! $request->filled('submission_note')) {
+            return back()->withErrors(['submission_note' => 'Sertakan setidaknya file atau catatan/link hasil kerja.'])->withInput();
+        }
+
+        try {
+            $this->taskService->submitResult($id, $request->only('submission_note', 'submission_path'));
+
+            return redirect()->route('tasks.show', $id)->with('success', 'Hasil kerja berhasil diserahkan. Status task dipindah ke Review.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['submission_note' => $e->getMessage()]);
+        }
     }
 
     public function destroy(string $id)

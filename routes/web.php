@@ -1,12 +1,12 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RoleController;
-use App\Http\Controllers\UserController;
+use App\Http\Controllers\TaskCommentController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskHandoverController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\TaskCommentController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -25,6 +25,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('tasks', TaskController::class);
     Route::post('tasks/{task}/claim', [TaskController::class, 'claim'])->name('tasks.claim');
     Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.updateStatus');
+    Route::post('tasks/{task}/submit', [TaskController::class, 'submitResult'])->name('tasks.submit');
     Route::resource('handovers', TaskHandoverController::class)->except(['edit', 'update', 'destroy', 'show']);
     Route::post('handovers/{handover}/respond', [TaskHandoverController::class, 'respond'])->name('handovers.respond');
 
@@ -35,4 +36,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('notifications/read', [NotificationController::class, 'markAllRead'])->name('notifications.read');
 });
 
-require __DIR__ . '/settings.php';
+require __DIR__.'/settings.php';
